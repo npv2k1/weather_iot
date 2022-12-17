@@ -8,6 +8,19 @@ from sklearn.datasets import make_regression
 
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import r2_score
+
+""" Đây là lời giải thích cho đoạn mã trên:
+1. Lớp DecisionNode: Lớp này dùng để tạo các nút trong cây quyết định. Nó có hai thuộc tính:
+a) tạp chất: Thuộc tính này lưu trữ tạp chất của nút. Nó được sử dụng để tính toán mức tăng.
+b) câu hỏi: Thuộc tính này lưu trữ câu hỏi được hỏi trong một nút cụ thể. Nó được sử dụng để phân chia tập dữ liệu.
+2. Phương thức __init__: Phương thức này khởi tạo đối tượng của lớp DecisionNode. Nó có 6 tham số:
+a) tạp chất: Tham số này lưu trữ tạp chất của nút. Nó được sử dụng để tính toán mức tăng.
+b) câu hỏi: Tham số này lưu trữ câu hỏi được hỏi trong một nút cụ thể. Nó được sử dụng để phân chia tập dữ liệu.
+c) true_subtree: Tham số này lưu trữ cây con bên trái của nút.
+d) false_subtree: Tham số này lưu cây con bên phải của nút.
+e) Feature_index: Tham số này lưu trữ chỉ mục của tính năng được sử dụng để phân chia tập dữ liệu.
+f) ngưỡng: Tham số này lưu trữ giá trị ngưỡng của tính năng được sử dụng để phân tách tập dữ liệu.
+  """
 class DecisionNode:
     """
     Class for a parent/leaf node in the decision tree.
@@ -30,18 +43,26 @@ class DecisionNode:
         # DecisionNode Object of the right subtree.
         self.false_right_subtree = false_subtree
 
+""" 
+Here is the explanation for the code above:
+1. The class is initialized with the value of the label. This value is determined by the majority vote of the labels in the parent node.
+2. The prediction value is stored as an attribute of the class. 
+"""
 class LeafNode:
     """ Leaf Node of the decision tree."""
     def __init__(self, value):
         self.prediction_value = value
+
 class DecisionTree:
     """Common class for making decision tree for classification and regression tasks."""
     def __init__(self, min_sample_split=3, min_impurity=1e-7, max_depth=float('inf'),
                  impurity_function=None, leaf_node_calculation=None):
-        """
+        """Hàm khởi tạo
+        1. Tạo cây rỗng
+        2. Gán các giá trị mặc định cho các tham số
+        3. Tạo hàm tính độ nhánh nếu chưa có 
         """
         self.root = None
-
         self.min_sample_split = min_sample_split
         self.min_impurity = min_impurity
         self.max_depth = max_depth
@@ -49,7 +70,7 @@ class DecisionTree:
         self.leaf_node_calculation = leaf_node_calculation
 
     def _partition_dataset(self, Xy, feature_index, threshold):
-        """Split the dataset based on the given feature and threshold.
+        """Tách tập dữ liệu dựa trên tính năng và ngưỡng đã cho.
         
         """
         split_func = None
@@ -64,24 +85,28 @@ class DecisionTree:
         return X_1, X_2
 
     def _find_best_split(self, Xy):
-        """ Find the best question/best feature threshold which splits the data well.
+        """ Tìm ngưỡng tốt nhất giúp phân chia dữ liệu tốt.
         
         """
-        best_question = tuple() # this will containe the feature and its value which make the best split(higest gain).
-        best_datasplit = {} # best data split.
+        # cái này sẽ chứa tính năng và giá trị của nó để tạo ra sự phân chia tốt nhất (higest gain).
+        best_question = tuple() 
+        
+        # best data split.
+        best_datasplit = {}
+        
         largest_impurity = 0
         n_features = (Xy.shape[1] - 1)
-        # iterate over all the features.
+        # Lặp tất cả các đăc trưng để tìm ra ngưỡng tốt nhất.
         for feature_index in range(n_features):
-            # find the unique values in that feature.
+            # lấy tất cả các giá trị duy nhất của đặc trưng.
             unique_value = set(s for s in Xy[:,feature_index])
-            # iterate over all the unique values to find the impurity.
+
+            # lặp qua tất cả các giá trị duy nhất của đặc trưng.
             for threshold in unique_value:
-                # split the dataset based on the feature value.
+                # chia tập dữ liệu dựa trên giá trị tính năng.
                 true_xy, false_xy = self._partition_dataset(Xy, feature_index, threshold)
-                # skip the node which has any on type 0. because this means it is already pure.
-                if len(true_xy) > 0 and len(false_xy) > 0:
-                    
+                # bỏ qua nút có bất kỳ loại 0. vì điều này có nghĩa là nó đã thuần.
+                if len(true_xy) > 0 and len(false_xy) > 0:                   
 
                     # find the y values.
                     y = Xy[:, -1]
@@ -106,21 +131,25 @@ class DecisionTree:
 
     def _build_tree(self, X, y, current_depth=0):
         """
-        This is a recursive method to build the decision tree.
+        Sử dụng đệ quy để xây dựng cây quyết định
         """
-        n_samples , n_features = X.shape
-        # Add y as last column of X
+        n_samples, n_features = X.shape # Lấy số lượng mẫu và số lượng đặc trưng
+
+        # Thêm cột y vào X
         Xy = np.concatenate((X, y), axis=1)
-        # find the Information gain on each feature each values and return the question which splits the data very well
-        # based on the impurity function. (classfication - Information gain, regression - variance reduction).
+
+        # tìm mức tăng Thông tin trên từng tính năng, từng giá trị và trả về câu hỏi phân tách dữ liệu rất tốt
+        # based on the impurity function. (classfication (Phân lớp) - Information gain, regression (Hồi quy) - variance reduction).
         if (n_samples >= self.min_sample_split) and (current_depth <= self.max_depth):
-            # find the best split/ which question split the data well.
+            # tìm cách phân chia tốt nhất/câu hỏi nào phân chia dữ liệu tốt.
             impurity, quesion, best_datasplit = self._find_best_split(Xy)
             if impurity > self.min_impurity:
-            # Build subtrees for the right and left branch.
-                true_branch = self._build_tree(best_datasplit["leftX"], best_datasplit["lefty"], current_depth + 1)
-                false_branch = self._build_tree(best_datasplit["rightX"], best_datasplit["righty"], current_depth + 1)
-                return DecisionNode( impurity=impurity, question=quesion, feature_index=quesion[0], threshold=quesion[1],
+                # Xây dựng các cây con cho nhánh phải và nhánh trái.
+                true_branch = self._build_tree(
+                    best_datasplit["leftX"], best_datasplit["lefty"], current_depth + 1)
+                false_branch = self._build_tree(
+                    best_datasplit["rightX"], best_datasplit["righty"], current_depth + 1)
+                return DecisionNode(impurity=impurity, question=quesion, feature_index=quesion[0], threshold=quesion[1],
                                     true_subtree=true_branch, false_subtree=false_branch)
 
         leaf_value = self._leaf_value_calculation(y)
@@ -129,10 +158,10 @@ class DecisionTree:
 
     def train(self, X, y):
         """
-        Build the decision tree.
+        Xây dựng cây quyết đinh
 
-        :param X: Train features/dependant values.
-        :param y: train target/independant value.
+        :param X: train features values .
+        :param y: train targetvalue.
         """
         self.root = self._build_tree(X, y, current_depth=0)
 
@@ -199,8 +228,6 @@ class DecisionTree:
                 # travers to the false right-side branch.
                 print (indentation + '----- False branch :)')
                 self.draw_tree(tree.false_right_subtree, indentation + "  ")
-
-
   
 class DecisionTreeRegression(DecisionTree):
     """ Decision Tree for the classification problem."""
@@ -254,127 +281,3 @@ class DecisionTreeRegression(DecisionTree):
         """
         # train the model.
         super(DecisionTreeRegression, self).train(X, y)
-
-class RandomForest:
-    """    Random forest common class.    """
-    def __init__(self, trees, n_trees, max_feature ,
-                 prediction_aggrigation_calculation):
-        """
-        :param trees: List - list of tree objects. classification tree/regression trees.
-        :param n_trees: int - How may estimators/tree should be used for random forest building.
-        :param max_feature: Int - How many features can be used for a tree from the whole features.
-        :param prediction_aggrigation_calculation: Function - Aggication function to find the prediction.
-        """
-        self.n_estimators = n_trees
-        self.max_features = max_feature
-        self.tree_feature_indexes = []
-        self.prediction_aggrigation_calculation = prediction_aggrigation_calculation 
-        # Initialize the trees.
-        self.trees = trees
-
-    def _make_random_suset(self, X, y, n_subsets, replasment=True):
-        """
-        Creata a random subset of dataset with/without replacement.
-
-        :param X: Depentand variables.
-        :param y: Indepentant variable.
-        :param n_subsets: Number of subset we need.
-        :param replasment: Boolena - Can we use the data sample again or not.
-        """
-        subset = []
-        # use 100% of data when replacement is true , use 50% otherwise.
-        sample_size = (X.shape[0] if replasment else (X.shape[0] // 2))
-
-        # First concadinate the X and y datasets in order to make a choice.
-        Xy = np.concatenate((X, y), axis=1)
-        np.random.shuffle(Xy)
-        # Select randome subset of data with replacement.
-        for i in range(n_subsets):
-            index = np.random.choice(range(sample_size), size=np.shape(range(sample_size)), replace=replasment)
-            X = Xy[index][:, :-1]
-            y = Xy[index][: , -1]
-            subset.append({"X" : X, "y": y})
-        return subset
-
-    def train(self, X, y):
-        """
-        Build the model.
-        :param X: Depentand variables.
-        :param y: Indepentant variable.
-        """
-        # if the max_features is not given then select it as square root of no on feature availabe.
-        n_features = X.shape[1]
-        if self.max_features == None:
-            self.max_features = int(math.sqrt(n_features))
-
-        # Split the dataset into number of subsets equal to n_estimators.
-        subsets = self._make_random_suset(X, y, self.n_estimators)
-
-        for i, subset in enumerate(subsets):
-            X_subset , y_subset = subset["X"], subset["y"]
-            # select a random sucset of features for each tree. This is called feature bagging.
-            idx = np.random.choice(range(n_features), size=self.max_features, replace=True)
-            # track this for prediction.
-            self.tree_feature_indexes.append(idx)
-            # Get the X with the selected features only.
-            X_subset = X_subset[:, idx]
-
-            # change the y_subet to i dimentional array.
-            y_subset = np.expand_dims(y_subset, axis =1)
-            # build the model with selected features and selected random subset from dataset.
-            self.trees[i].train(X_subset, y_subset)
-
-    def predict(self, test_X):
-        """
-        Predict the new samples.
-
-        :param test_X: Depentant variables for prediction.
-        """
-        # predict each sample one by one.
-        y_preds = np.empty((test_X.shape[0], self.n_estimators))
-        # find the prediction from each tree for eeach samples
-        for i, tree in enumerate(self.trees):
-            features_index = self.tree_feature_indexes[i]
-            X_selected_features = test_X[:, features_index]
-            if isinstance(tree, DecisionTreeClassifier):
-                y_preds[:, i] = tree.predict(X_selected_features).reshape((-1,))
-            else:
-                y_preds[:, i] = tree.predict(X_selected_features)
-        # find the arrgrecated output.
-        y_pred = self.prediction_aggrigation_calculation(y_preds)
-
-        return y_pred
-
-class RandomForestRegression(RandomForest):
-    """Rnadom forest for classification task."""
-    def __init__(self, max_feature, max_depth, n_trees=100, min_sample_split=2, min_impurity=1e-7):
-        """
-        :param max_depth: Int - Max depth of each tree.
-        :param n_trees: Int - Number of trees/estimetors.
-        :param min_sample_split: Int - minimum samples for a node to have before going for split.
-        :param min_impurity: Int - Min inpurity a node can have.
-        """
-        self.prediction_aggrigation_calculation = self._mean_calculation
-        
-        # Initializing the trees.
-        self.trees = []
-        for _ in range(n_trees):
-            self.trees.append(DecisionTreeRegression(min_sample_split=min_sample_split,
-                                                     min_impurity=min_impurity, max_depth=max_depth))
-
-        super().__init__(trees=self.trees, n_trees=n_trees,max_feature=max_feature,
-                         prediction_aggrigation_calculation=self.prediction_aggrigation_calculation)
-    
-    def _mean_calculation(self, y_preds):
-        """
-        Find mean prediction of all tree prediction for each sampple.
-
-        :param y_preds: Prediction value from number of estimators trees.
-        """
-        # create a empty array to store the prediction.
-        y_pred = np.empty((y_preds.shape[0], 1))
-        # iterate over all the data samples.
-        for i, sample_predictions in enumerate(y_preds):
-            y_pred[i] = np.mean(sample_predictions)
-
-        return y_pred
