@@ -9,7 +9,7 @@ from sklearn.datasets import make_regression
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import r2_score
 
-""" Đây là lời giải thích cho đoạn mã trên:
+"""
 1. Lớp DecisionNode: Lớp này dùng để tạo các nút trong cây quyết định. Nó có hai thuộc tính:
 a) tạp chất: Thuộc tính này lưu trữ tạp chất của nút. Nó được sử dụng để tính toán mức tăng.
 b) câu hỏi: Thuộc tính này lưu trữ câu hỏi được hỏi trong một nút cụ thể. Nó được sử dụng để phân chia tập dữ liệu.
@@ -21,40 +21,53 @@ d) false_subtree: Tham số này lưu cây con bên phải của nút.
 e) Feature_index: Tham số này lưu trữ chỉ mục của tính năng được sử dụng để phân chia tập dữ liệu.
 f) ngưỡng: Tham số này lưu trữ giá trị ngưỡng của tính năng được sử dụng để phân tách tập dữ liệu.
   """
+
+
 class DecisionNode:
     """
-    Class for a parent/leaf node in the decision tree.
-    A Node with node information about it's left and right nodes if any. it has the impurity info also.
+    Lớp cho nút cha/lá trong cây quyết định.
+    Một nút có thông tin nút về nút trái và nút phải nếu có. nó cũng có thông tin về tạp chất.
     """
+
     def __init__(self, impurity=None, question=None, feature_index=None, threshold=None,
                  true_subtree=None, false_subtree=None):
-        """
-        :param
-        """
         self.impurity = impurity
-        # Which question to ask , to split the dataset.
-        self.question = question 
-        # Index of the feature which make the best fit for this node.
+        # Câu hỏi được hỏi trong nút này để phân chia tập dữ liệu.
+        self.question = question
+        # Chỉ mục của tính năng phù hợp nhất cho nút này.
         self.feature_index = feature_index
-        # The threshold value for that feature to make the split.
+        # Giá trị ngưỡng cho tính năng đó để thực hiện phân tách.
         self.threshold = threshold
-        # DecisionNode Object of the left subtree.
+        # Trái
         self.true_left_subtree = true_subtree
-        # DecisionNode Object of the right subtree.
+        # phải
         self.false_right_subtree = false_subtree
 
-""" 
-Here is the explanation for the code above:
-1. The class is initialized with the value of the label. This value is determined by the majority vote of the labels in the parent node.
-2. The prediction value is stored as an attribute of the class. 
-"""
+
 class LeafNode:
-    """ Leaf Node of the decision tree."""
+    """ Nút lá trong cây quyết định. Nó có một giá trị dự đoán."""
+
     def __init__(self, value):
         self.prediction_value = value
 
+
 class DecisionTree:
-    """Common class for making decision tree for classification and regression tasks."""
+    """
+    Cây quyết đinh.
+    Cách hoạt động:
+    1. Tạo cây rỗng
+    2. Tìm ra tính năng phù hợp nhất để phân chia tập dữ liệu
+        2.1. Tìm ra ngưỡng phù hợp nhất để phân chia tập dữ liệu
+        2.2. Tính toán tạp chất sau khi phân chia (tạp chất là mức tăng thông tin sau khi phân chia)
+        2.3. Tìm ra ngưỡng tốt nhất
+    3. Tạo cây con bên trái và bên phải
+        3.1. Số lượng mẫu nhỏ hơn min_sample_split thì dừng trả về nút lá chứa giá trị dự đoán
+    4. Lặp lại bước 2 và 3 cho đến khi đạt được các điều kiện dừng 
+
+
+
+    """
+
     def __init__(self, min_sample_split=3, min_impurity=1e-7, max_depth=float('inf'),
                  impurity_function=None, leaf_node_calculation=None):
         """Hàm khởi tạo
@@ -71,14 +84,20 @@ class DecisionTree:
 
     def _partition_dataset(self, Xy, feature_index, threshold):
         """Tách tập dữ liệu dựa trên tính năng và ngưỡng đã cho.
-        
+
         """
         split_func = None
         if isinstance(threshold, int) or isinstance(threshold, float):
-            split_func = lambda sample: sample[feature_index] >= threshold
+            # Đối với các ngưỡng số nguyên hoặc thực, hàm phân chia tập dữ liệu
+            # sẽ trả về giá trị đúng nếu giá trị của tính năng lớn hơn hoặc bằng
+            # ngưỡng đã cho.
+            def split_func(sample): return sample[feature_index] >= threshold
         else:
-            split_func = lambda sample: sample[feature_index] == threshold
+            # Đối với các ngưỡng không phải số nguyên hoặc thực, hàm phân chia tập dữ liệu
+            # sẽ trả về giá trị đúng nếu giá trị của tính năng bằng ngưỡng đã cho.
+            def split_func(sample): return sample[feature_index] == threshold
 
+        # Tách tập dữ liệu dựa trên hàm phân chia được định nghĩa.
         X_1 = np.array([sample for sample in Xy if split_func(sample)])
         X_2 = np.array([sample for sample in Xy if not split_func(sample)])
 
@@ -86,27 +105,28 @@ class DecisionTree:
 
     def _find_best_split(self, Xy):
         """ Tìm ngưỡng tốt nhất giúp phân chia dữ liệu tốt.
-        
+
         """
         # cái này sẽ chứa tính năng và giá trị của nó để tạo ra sự phân chia tốt nhất (higest gain).
-        best_question = tuple() 
-        
+        best_question = tuple()
+
         # best data split.
         best_datasplit = {}
-        
+
         largest_impurity = 0
         n_features = (Xy.shape[1] - 1)
         # Lặp tất cả các đăc trưng để tìm ra ngưỡng tốt nhất.
         for feature_index in range(n_features):
             # lấy tất cả các giá trị duy nhất của đặc trưng.
-            unique_value = set(s for s in Xy[:,feature_index])
+            unique_value = set(s for s in Xy[:, feature_index])
 
             # lặp qua tất cả các giá trị duy nhất của đặc trưng.
             for threshold in unique_value:
                 # chia tập dữ liệu dựa trên giá trị tính năng.
-                true_xy, false_xy = self._partition_dataset(Xy, feature_index, threshold)
+                true_xy, false_xy = self._partition_dataset(
+                    Xy, feature_index, threshold)
                 # bỏ qua nút có bất kỳ loại 0. vì điều này có nghĩa là nó đã thuần.
-                if len(true_xy) > 0 and len(false_xy) > 0:                   
+                if len(true_xy) > 0 and len(false_xy) > 0:
 
                     # find the y values.
                     y = Xy[:, -1]
@@ -121,19 +141,23 @@ class DecisionTree:
                         largest_impurity = impurity
                         best_question = (feature_index, threshold)
                         best_datasplit = {
-                                    "leftX": true_xy[:, :n_features],   # X of left subtree
-                                    "lefty": true_xy[:, n_features:],   # y of left subtree
-                                    "rightX": false_xy[:, :n_features],  # X of right subtree
-                                    "righty": false_xy[:, n_features:]   # y of right subtree
+                            # X of left subtree
+                            "leftX": true_xy[:, :n_features],
+                            # y of left subtree
+                            "lefty": true_xy[:, n_features:],
+                            # X of right subtree
+                            "rightX": false_xy[:, :n_features],
+                            # y of right subtree
+                            "righty": false_xy[:, n_features:]
                         }
-                    
+
         return largest_impurity, best_question, best_datasplit
 
     def _build_tree(self, X, y, current_depth=0):
         """
         Sử dụng đệ quy để xây dựng cây quyết định
         """
-        n_samples, n_features = X.shape # Lấy số lượng mẫu và số lượng đặc trưng
+        n_samples, n_features = X.shape  # Lấy số lượng mẫu và số lượng đặc trưng
 
         # Thêm cột y vào X
         Xy = np.concatenate((X, y), axis=1)
@@ -155,7 +179,6 @@ class DecisionTree:
         leaf_value = self._leaf_value_calculation(y)
         return LeafNode(value=leaf_value)
 
-
     def train(self, X, y):
         """
         Xây dựng cây quyết đinh
@@ -171,7 +194,7 @@ class DecisionTree:
         if tree is None:
             tree = self.root
         # if it a leaf node the return the prediction.
-        if isinstance(tree , LeafNode):
+        if isinstance(tree, LeafNode):
 
             return tree.prediction_value
         feature_value = x[tree.feature_index]
@@ -179,7 +202,7 @@ class DecisionTree:
         branch = tree.false_right_subtree
 
         if isinstance(feature_value, int) or isinstance(feature_value, float):
-            
+
             if feature_value >= tree.threshold:
 
                 branch = tree.true_left_subtree
@@ -195,8 +218,8 @@ class DecisionTree:
         # y_pred = np.array(y_pred)
         # y_pred = np.expand_dims(y_pred, axis = 1)
         return y_pred
-    
-    def draw_tree(self, tree = None, indentation = " "):
+
+    def draw_tree(self, tree=None, indentation=" "):
         """print the whole decitions of the tree from top to bottom."""
         if tree is None:
             tree = self.root
@@ -211,26 +234,29 @@ class DecisionTree:
             condition = "=="
             if isinstance(threshold, int) or isinstance(threshold, float):
                 condition = ">="
-            print(indention,"Is {col}{condition}{value}?".format(col=feature_index, condition=condition, value=threshold))
+            print(indention, "Is {col}{condition}{value}?".format(
+                col=feature_index, condition=condition, value=threshold))
 
-        if isinstance(tree , LeafNode):
-            print(indentation,"The predicted value -->", tree.prediction_value)
+        if isinstance(tree, LeafNode):
+            print(indentation, "The predicted value -->", tree.prediction_value)
             return
-        
+
         else:
             # print the question.
-            print_question(tree.question,indentation)
+            print_question(tree.question, indentation)
             if tree.true_left_subtree is not None:
                 # travers to the true left branch.
-                print (indentation + '----- True branch :)')
+                print(indentation + '----- True branch :)')
                 self.draw_tree(tree.true_left_subtree, indentation + "  ")
             if tree.false_right_subtree is not None:
                 # travers to the false right-side branch.
-                print (indentation + '----- False branch :)')
+                print(indentation + '----- False branch :)')
                 self.draw_tree(tree.false_right_subtree, indentation + "  ")
-  
+
+
 class DecisionTreeRegression(DecisionTree):
-    """ Decision Tree for the classification problem."""
+    """ Decision Tree for the Regression problem."""
+
     def __init__(self, min_sample_split=3, min_impurity=1e-7, max_depth=float('inf'),
                  ):
         """
@@ -241,12 +267,11 @@ class DecisionTreeRegression(DecisionTree):
         self._impurity_function = self._claculate_variance_reduction
         self._leaf_value_calculation = self._calculate_colum_mean
         super(DecisionTreeRegression, self).__init__(min_sample_split=min_sample_split, min_impurity=min_impurity, max_depth=max_depth,
-                         impurity_function=self._impurity_function, leaf_node_calculation=self._leaf_value_calculation)
-    
+                                                     impurity_function=self._impurity_function, leaf_node_calculation=self._leaf_value_calculation)
 
     def _claculate_variance_reduction(self, y, y1, y2):
         """
-        Calculate the Variance reduction.
+        Tính Giảm phương sai Variance Reduction.
 
         :param y: target value.
         :param y1: target value for dataset in the true split/right branch.
@@ -258,15 +283,16 @@ class DecisionTreeRegression(DecisionTree):
         variance_y2 = np.var(y2)
 
         y_len = len(y)
-        fraction_1 = len(y1) / y_len 
+        fraction_1 = len(y1) / y_len
         fraction_2 = len(y2) / y_len
-        variance_reduction = variance - (fraction_1 * variance_y1 + fraction_2 * variance_y2)
-        return  variance_reduction
+        variance_reduction = variance - \
+            (fraction_1 * variance_y1 + fraction_2 * variance_y2)
+        return variance_reduction
 
     def _calculate_colum_mean(self, y):
         """
-        calculate the prediction value for that leaf node using mean.
-        
+        Tính toán giá trị nút là giá trị trung bình của các giá trị.
+
         :param y: leaf node target array.
         """
         mean = np.mean(y, axis=0)
